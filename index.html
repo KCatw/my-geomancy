@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地占術盾牌計算板</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .shield-container { display: grid; grid-template-columns: repeat(8, 60px); gap: 10px; justify-content: center; margin-top: 20px; }
+        .figure-box { border: 1px solid #ccc; background: white; padding: 10px; text-align: center; border-radius: 4px; }
+        .figure-name { font-size: 12px; color: #666; margin-bottom: 5px; }
+        .dot-row { line-height: 10px; font-size: 20px; }
+        .input-section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .input-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        input { width: 40px; text-align: center; font-size: 16px; }
+        button { margin-top: 20px; padding: 10px 20px; cursor: pointer; background: #333; color: #fff; border: none; border-radius: 4px; }
+        .result-zone { margin-top: 30px; font-weight: bold; color: #d32f2f; }
+    </style>
+</head>
+<body>
+
+    <h2>地占術盾牌計算板</h2>
+    <p>請手動投擲銅板：正面輸入 1 (單點)，反面輸入 2 (雙點)</p>
+
+    <div class="input-section">
+        <div class="input-grid" id="mothers-input">
+            </div>
+        <button onclick="generateShield()">計算盾牌</button>
+        <button onclick="location.reload()">重新開始</button>
+    </div>
+
+    <div id="shield-display" class="shield-container"></div>
+    <div id="final-judge" class="result-zone"></div>
+
+<script>
+    // 16卦名稱對照 (簡化版)
+    const figureNames = {
+        "1111": "Via (道路)", "2222": "Populus (人民)", "1122": "Fortuna Major (大幸運)", 
+        "2211": "Fortuna Minor (小幸運)", "1212": "Albus (白)", "2121": "Rubeus (紅)",
+        "1221": "Conjunctio (結合)", "2112": "Carcer (監獄)", "1112": "Acquisitio (獲得)",
+        "2111": "Amissio (失去)", "1222": "Laetitia (喜悅)", "2221": "Tristitia (憂愁)",
+        "1121": "Puella (少女)", "2122": "Puer (男孩)", "1211": "Caput Draconis (龍頭)",
+        "2212": "Cauda Draconis (龍尾)"
+    };
+
+    // 初始化輸入框
+    const inputGrid = document.getElementById('mothers-input');
+    for (let m = 1; m <= 4; m++) {
+        let div = document.createElement('div');
+        div.innerHTML = `<div>母親 ${m}</div>` + [1,2,3,4].map(r => `<input type="number" min="1" max="2" id="m${m}r${r}" placeholder="行${r}">`).join('<br>');
+        inputGrid.appendChild(div);
+    }
+
+    function calc(a, b) { return (a + b) % 2 === 0 ? 2 : 1; }
+
+    function getDotsHtml(arr) {
+        return arr.map(v => v === 1 ? "●" : "●●").join('<br>');
+    }
+
+    function generateShield() {
+        // 1. 讀取母親
+        let m = [];
+        for(let i=1; i<=4; i++) {
+            let fig = [1,2,3,4].map(r => parseInt(document.getElementById(`m${i}r${r}`).value) || 2);
+            m.push(fig);
+        }
+
+        // 2. 計算女兒 (轉置)
+        let d = [[],[],[],[]];
+        for(let r=0; r<4; r++) { for(let i=0; i<4; i++) { d[r].push(m[i][r]); } }
+
+        // 3. 計算姪子 (母1+母2, 母3+母4, 女1+女2, 女3+女4)
+        let n1 = m[0].map((v, i) => calc(v, m[1][i]));
+        let n2 = m[2].map((v, i) => calc(v, m[3][i]));
+        let n3 = d[0].map((v, i) => calc(v, d[1][i]));
+        let n4 = d[2].map((v, i) => calc(v, d[3][i]));
+
+        // 4. 右證人(n1+n2), 左證人(n3+n4)
+        let rw = n1.map((v, i) => calc(v, n2[i]));
+        let lw = n3.map((v, i) => calc(v, n4[i]));
+
+        // 5. 法官 (rw+lw)
+        let judge = rw.map((v, i) => calc(v, lw[i]));
+
+        // 顯示結果 (簡化顯示)
+        const display = document.getElementById('shield-display');
+        display.innerHTML = "";
+        [...m, ...d, n1, n2, n3, n4, rw, lw, judge].forEach((fig, idx) => {
+            let key = fig.join('');
+            display.innerHTML += `<div class="figure-box"><div class="figure-name">${figureNames[key] || ''}</div><div class="dot-row">${getDotsHtml(fig)}</div></div>`;
+        });
+
+        document.getElementById('final-judge').innerText = "最終法官判決：" + (figureNames[judge.join('')] || "未知");
+    }
+</script>
+</body>
+</html>
