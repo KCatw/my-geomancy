@@ -3,94 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>地占術盾牌計算板</title>
+    <title>地占術深度解析板</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f4; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .shield-container { display: grid; grid-template-columns: repeat(8, 60px); gap: 10px; justify-content: center; margin-top: 20px; }
-        .figure-box { border: 1px solid #ccc; background: white; padding: 10px; text-align: center; border-radius: 4px; }
-        .figure-name { font-size: 12px; color: #666; margin-bottom: 5px; }
-        .dot-row { line-height: 10px; font-size: 20px; }
-        .input-section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .input-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        input { width: 40px; text-align: center; font-size: 16px; }
-        button { margin-top: 20px; padding: 10px 20px; cursor: pointer; background: #333; color: #fff; border: none; border-radius: 4px; }
-        .result-zone { margin-top: 30px; font-weight: bold; color: #d32f2f; }
+        :root { --primary: #2c3e50; --accent: #c0392b; --bg: #f4f7f6; }
+        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--primary); display: flex; flex-direction: column; align-items: center; padding: 40px 20px; line-height: 1.6; }
+        .container { max-width: 1000px; width: 100%; text-align: center; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-bottom: 30px; }
+        .input-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0; }
+        .mother-col { display: flex; flex-direction: column; gap: 10px; align-items: center; background: #f9f9f9; padding: 15px; border-radius: 10px; }
+        input { width: 50px; height: 45px; text-align: center; font-size: 20px; border: 2px solid #ddd; border-radius: 8px; }
+        button { background: var(--primary); color: white; border: none; padding: 15px 40px; font-size: 18px; border-radius: 30px; cursor: pointer; transition: all 0.3s; margin: 10px; }
+        button:hover { background: #34495e; transform: translateY(-2px); }
+        .shield-layout { display: flex; flex-direction: column; align-items: center; gap: 25px; margin: 40px 0; padding: 20px; background: #fff; border-radius: 15px; }
+        .row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .figure-box { border: 1px solid #eee; padding: 15px; border-radius: 10px; width: 90px; transition: all 0.3s; }
+        .fig-name { font-size: 12px; font-weight: bold; color: #7f8c8d; margin-bottom: 8px; min-height: 35px; }
+        .dots { font-size: 24px; line-height: 1.1; color: #222; }
+        .analysis-card { background: #fff; border-left: 5px solid var(--accent); text-align: left; padding: 25px; margin-top: 20px; display: none; }
+        .analysis-title { font-size: 22px; color: var(--accent); font-weight: bold; margin-bottom: 10px; }
+        .analysis-content { font-size: 16px; color: #34495e; white-space: pre-line; }
     </style>
 </head>
 <body>
 
-    <h2>地占術盾牌計算板</h2>
-    <p>請手動投擲銅板：正面輸入 1 (單點)，反面輸入 2 (雙點)</p>
+<div class="container">
+    <h1>地占術深度解析系統</h1>
+    <p>手動拋擲銅板：正面輸入 1 (單點)，反面輸入 2 (雙點)</p>
 
-    <div class="input-section">
-        <div class="input-grid" id="mothers-input">
-            </div>
-        <button onclick="generateShield()">計算盾牌</button>
-        <button onclick="location.reload()">重新開始</button>
+    <div class="card">
+        <div class="input-grid" id="mothers-input"></div>
+        <button onclick="generateShield()">啟動邏輯演算</button>
+        <button onclick="location.reload()" style="background:#bdc3c7;">重新開局</button>
     </div>
 
-    <div id="shield-display" class="shield-container"></div>
-    <div id="final-judge" class="result-zone"></div>
+    <div id="shield-result" class="shield-layout" style="display:none;">
+        <div class="row" id="row-1"></div>
+        <div class="row" id="row-2"></div>
+        <div class="row" id="row-3"></div>
+        
+        <div id="analysis-box" class="analysis-card">
+            <div class="analysis-title" id="res-title"></div>
+            <div class="analysis-content" id="res-desc"></div>
+        </div>
+    </div>
+</div>
 
 <script>
-    // 16卦名稱對照 (簡化版)
-    const figureNames = {
-        "1111": "Via (道路)", "2222": "Populus (人民)", "1122": "Fortuna Major (大幸運)", 
-        "2211": "Fortuna Minor (小幸運)", "1212": "Albus (白)", "2121": "Rubeus (紅)",
-        "1221": "Conjunctio (結合)", "2112": "Carcer (監獄)", "1112": "Acquisitio (獲得)",
-        "2111": "Amissio (失去)", "1222": "Laetitia (喜悅)", "2221": "Tristitia (憂愁)",
-        "1121": "Puella (少女)", "2122": "Puer (男孩)", "1211": "Caput Draconis (龍頭)",
-        "2212": "Cauda Draconis (龍尾)"
+    const db = {
+        "1111": ["Via 道路", "變動、旅行、孤獨、純粹的流動。", "這件事充滿不確定性。當前的路徑是正確的，但你必須獨自前行。這是一個『動態』的訊號，代表現狀很快就會改變，不要試圖停留在原地。"],
+        "2222": ["Populus 人民", "群眾、穩定、平凡、隨波逐流。", "目前處於停滯期或大眾化狀態。沒有特別的好壞，但缺乏亮點。如果追求創新，這是一個警告；如果追求平穩，這是一個好兆頭。"],
+        "1122": ["Fortuna Major 大幸運", "內在力量、大成功、榮耀、穩固。", "這是地占中最深刻的力量。成功來自於你的實力與長期的積累。這不是偶然的好運，而是你應得的結果。保持謙遜，力量會更持久。"],
+        "2211": ["Fortuna Minor 小幸運", "外在支援、短暫成功、機會、速度。", "運氣來自外部。事情進展會很快，但基礎不夠深。適合短期衝刺，不適合長期抗戰。趁著好運還在，趕快把成果收割下來。"],
+        "1212": ["Albus 白", "智慧、和平、清晰、精神層面。", "這代表清晰的思考與純潔的動機。目前的局勢對溝通、合約或學術研究非常有利。保持客觀冷靜，你就能看穿迷霧。"],
+        "2121": ["Rubeus 紅", "衝動、熱情、暴力、危險。", "警告！目前充滿情緒化的衝動與潛在的衝突。這是一個紅燈訊號，建議先冷靜下來，不要在憤怒或過度興奮時做決定。"],
+        "1221": ["Conjunctio 結合", "集結、契約、貿易、連結。", "這件事的核心在於『人際關係』或『資源整合』。成功的關鍵是談判與尋求合作伴。單打獨鬥會失敗，你需要盟友。"],
+        "2112": ["Carcer 監獄", "限制、束縛、孤立、保護。", "你感到受困，但有時這也是一種保護。目前不適合擴張，適合鞏固防禦。接受現狀的限制，在有限的空間內尋找轉機。"],
+        "1112": ["Acquisitio 獲得", "增加、獲利、吸收、擴張。", "非常有力的獲利訊號！不論是金錢還是知識，你都在增長。這是一個『吸納』的過程，儘管開口去爭取，你會得到比預期更多的東西。"],
+        "2111": ["Amissio 失去", "虧損、放棄、慷慨、流失。", "這件事會讓你付出代價。可能是金錢，也可能是精力。但有時『失去』是為了清空空間。如果你問的是投資，請務必謹慎。"],
+        "1222": ["Laetitia 喜悅", "快樂、健康、昂揚、外部的慶典。", "局勢明朗且令人愉悅。這是一個正向的訊號，代表事情會以輕鬆的方式解決。享受這個過程，不需要過度焦慮。"],
+        "2221": ["Tristitia 憂愁", "壓抑、重量、結構、緩慢。", "事情進展緩慢且讓人感到沉重。這代表你需要承擔責任或面對現實的骨感。這不是失敗，而是磨練，你需要更多的耐心。"],
+        "1121": ["Puella 少女", "感性、和諧、表面、短暫的美好。", "氣氛愉快但缺乏深度。適合社交與休閒，不適合硬碰硬的商業對決。注意不要被表象所迷惑。"],
+        "2122": ["Puer 男孩", "衝勁、競爭、不成熟、能量。", "充滿戰鬥力但也容易魯莽。如果你正在創業或比賽，這給了你力量；但如果是需要穩重的場合，請控制你的脾氣。"],
+        "1211": ["Caput Draconis 龍頭", "入口、新開始、增長、幸運的開端。", "大吉！這是一個全新的入口。新的機會正在敲門，雖然還不成熟，但潛力巨大。勇敢踏進去。"],
+        "2212": ["Cauda Draconis 龍尾", "出口、終結、陷阱、告別。", "這是一個結束的訊號。代表舊有的模式必須終結，或者某個關係即將畫下句點。不要留戀過去，清空它，未來才會開始。"]
     };
 
-    // 初始化輸入框
     const inputGrid = document.getElementById('mothers-input');
     for (let m = 1; m <= 4; m++) {
-        let div = document.createElement('div');
-        div.innerHTML = `<div>母親 ${m}</div>` + [1,2,3,4].map(r => `<input type="number" min="1" max="2" id="m${m}r${r}" placeholder="行${r}">`).join('<br>');
-        inputGrid.appendChild(div);
+        let col = document.createElement('div');
+        col.className = 'mother-col';
+        col.innerHTML = `<div class="mother-title">母親 ${m}</div>` + 
+                        [1,2,3,4].map(r => `<input type="number" min="1" max="2" id="m${m}r${r}" placeholder="L${r}">`).join('');
+        inputGrid.appendChild(col);
     }
 
     function calc(a, b) { return (a + b) % 2 === 0 ? 2 : 1; }
-
-    function getDotsHtml(arr) {
-        return arr.map(v => v === 1 ? "●" : "●●").join('<br>');
+    function getDots(arr) { return arr.map(v => v === 1 ? "●" : "●●").join('<br>'); }
+    function createBox(fig, label) {
+        let key = fig.join('');
+        let data = db[key] || ["未知", "無數據", "請檢查輸入"];
+        return `<div class="figure-box"><div class="fig-name">${label}<br>${data[0]}</div><div class="dots">${getDots(fig)}</div></div>`;
     }
 
     function generateShield() {
-        // 1. 讀取母親
         let m = [];
         for(let i=1; i<=4; i++) {
             let fig = [1,2,3,4].map(r => parseInt(document.getElementById(`m${i}r${r}`).value) || 2);
             m.push(fig);
         }
 
-        // 2. 計算女兒 (轉置)
         let d = [[],[],[],[]];
         for(let r=0; r<4; r++) { for(let i=0; i<4; i++) { d[r].push(m[i][r]); } }
 
-        // 3. 計算姪子 (母1+母2, 母3+母4, 女1+女2, 女3+女4)
-        let n1 = m[0].map((v, i) => calc(v, m[1][i]));
-        let n2 = m[2].map((v, i) => calc(v, m[3][i]));
-        let n3 = d[0].map((v, i) => calc(v, d[1][i]));
-        let n4 = d[2].map((v, i) => calc(v, d[3][i]));
+        let n = [
+            m[0].map((v, i) => calc(v, m[1][i])),
+            m[2].map((v, i) => calc(v, m[3][i])),
+            d[0].map((v, i) => calc(v, d[1][i])),
+            d[2].map((v, i) => calc(v, d[3][i]))
+        ];
 
-        // 4. 右證人(n1+n2), 左證人(n3+n4)
-        let rw = n1.map((v, i) => calc(v, n2[i]));
-        let lw = n3.map((v, i) => calc(v, n4[i]));
-
-        // 5. 法官 (rw+lw)
+        let rw = n[0].map((v, i) => calc(v, n[1][i]));
+        let lw = n[2].map((v, i) => calc(v, n[3][i]));
         let judge = rw.map((v, i) => calc(v, lw[i]));
 
-        // 顯示結果 (簡化顯示)
-        const display = document.getElementById('shield-display');
-        display.innerHTML = "";
-        [...m, ...d, n1, n2, n3, n4, rw, lw, judge].forEach((fig, idx) => {
-            let key = fig.join('');
-            display.innerHTML += `<div class="figure-box"><div class="figure-name">${figureNames[key] || ''}</div><div class="dot-row">${getDotsHtml(fig)}</div></div>`;
-        });
+        document.getElementById('row-1').innerHTML = m.map((f, i) => createBox(f, `母${i+1}`)).join('') + d.map((f, i) => createBox(f, `女${i+1}`)).join('');
+        document.getElementById('row-2').innerHTML = n.map((f, i) => createBox(f, `姪${i+1}`)).join('');
+        document.getElementById('row-3').innerHTML = createBox(rw, "右證人") + createBox(lw, "左證人") + createBox(judge, "法官");
 
-        document.getElementById('final-judge').innerText = "最終法官判決：" + (figureNames[judge.join('')] || "未知");
+        let resData = db[judge.join('')];
+        document.getElementById('res-title').innerText = "最終法官解析：" + resData[0];
+        document.getElementById('res-desc').innerText = `【關鍵字】：${resData[1]}\n\n【顧問建議】：\n${resData[2]}`;
+        
+        document.getElementById('shield-result').style.display = 'flex';
+        document.getElementById('analysis-box').style.display = 'block';
+        window.scrollTo(0, document.body.scrollHeight);
     }
 </script>
 </body>
